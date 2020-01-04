@@ -18,14 +18,20 @@
 #include <OpenGL/gl3ext.h>
 #endif
 
-
+#define GL_ERR gl_error(__FILE__, __LINE__)
 #define WINDOW_W 600
 #define WINDOW_H 600
+
+#include "mesh.h"
+#include "mesh_renderer.h"
+
 
 
 // Rendering based on:
 // https://github.com/raysan5/raylib/blob/dc6136e820a5793fb469e78154b57a46ac619139/src/rlgl.h
 
+
+int current_model = 0;
 
 void close_callback(GLFWwindow * window) {
     printf("close_callback");
@@ -35,11 +41,22 @@ void size_callback(GLFWwindow * window, int width, int height) {
     printf("size_callback");
 }
 
-void cursorpos_callback(GLFWwindow * window, double mx, double my) {}
+void cursorpos_callback(GLFWwindow * window, double mx, double my) {
+    printf("size_callback");   
+}
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     printf("key_callback\n");
-    glfwSetWindowShouldClose(window, 1);
+    if (key == GLFW_KEY_ESCAPE) {
+        printf("glfw_key_callback - ESC - Closing window");
+        glfwSetWindowShouldClose(window, 1);
+        return;
+    }
+
+    if (action == GLFW_RELEASE) {
+        current_model += 1;
+    }
+    
 }
 
 void mousebutton_callback(GLFWwindow * window, int button, int action, int mods) {}
@@ -89,8 +106,6 @@ void gl_error(const char *file, int line) {
     assert(!has_errors);
 }
 
-#define GL_ERR gl_error(__FILE__, __LINE__)
-
 GLuint compile_shader(GLenum type, const char *src) {
     GLuint shader;
     GLint compiled;
@@ -110,46 +125,6 @@ GLuint compile_shader(GLenum type, const char *src) {
     }
     printf("Success!\n");
     return shader;
-}
-
-inline float *push_v3_arr(float *v, float x, float y, float z) {
-    v[0] = x;
-    v[1] = y;
-    v[2] = z;
-    printf("push_v3_arr: %f, %f, %f\n",  x, y, z);
-    return v + 3;
-}
-
-inline float *push_v2_arr(float *v, float x, float y) {
-    v[0] = x;
-    v[1] = y;
-    printf("push_v2_arr: %f, %f\n",  x, y);
-    return v + 2;
-}
-
-void push_textured_quad_arr(float*v, float* t, float x0, float y0, float x1, float y1, float s0, float t0, float s1, float t1) {
-    // quad 1 2 3 4
-    // -->
-    // triangle 1 2 3
-    // triangle 3 4 1
-
-    //v = push_v5_arr(v, x0, y0, 0, s0, t0); // 1
-    //v = push_v5_arr(v, x1, y0, 0, s1, t0); // 2
-    //v = push_v5_arr(v, x1, y1, 0, s1, t1); // 3
-    //v = push_v5_arr(v, x0, y1, 0, s0, t1); // 4
-
-    v = push_v3_arr(v, x0, y0, 1.0);
-    t = push_v2_arr(t, s0, t0); // 1
-    v = push_v3_arr(v, x1, y0, 1.0);
-    t = push_v2_arr(t, s1, t0); // 2
-    v = push_v3_arr(v, x1, y1, 1.0);
-    t = push_v2_arr(t, s1, t1); // 3
-    v = push_v3_arr(v, x1, y1, 1.0);
-    t = push_v2_arr(t, s1, t1); // 3
-    v = push_v3_arr(v, x0, y1, 1.0);
-    t = push_v2_arr(t, s0, t1); // 4
-    v = push_v3_arr(v, x0, y0, 1.0);
-    t = push_v2_arr(t, s0, t0); // 1
 }
 
 void set_float3(float3 *v, float x, float y, float z) {
@@ -345,32 +320,11 @@ int main(int argc, char const *argv[]) {
     float aspect = WINDOW_W / (float)WINDOW_H;
     m_mat4_perspective(projection_matrix, 10.0, aspect, 0.1, 999.0);
 
-	set_float3(&camera_position, 0, 1, 100);
+	set_float3(&camera_position, 1.5, 1.5, 3);
 	set_float3(&camera_direction, 0 - camera_position.x ,0 - camera_position.y , 0 - camera_position.z);
 	set_float3(&camera_up, 0,1,0);
 	
 	m_mat4_lookat(view_matrix, &camera_position, &camera_direction, &camera_up);
-
-	printf("Creating mesh\n");
-    int mesh_vertices_count = 6;
-	int mesh_vertices_size = sizeof(float) * mesh_vertices_count * 3;
-    int mesh_texcoords_size = sizeof(float) * mesh_vertices_count * 2;
-	float* mesh_vertices = (float *) malloc(mesh_vertices_size);
-    float* mesh_texcoords = (float *) malloc(mesh_texcoords_size);
-
-	float* mv = mesh_vertices;
-    float* mt = mesh_texcoords;
-    {
-		
-        push_textured_quad_arr(mv, mt, -10, -10, 10, 10, 0, 0, 1, 1);
-		// float scale = 1.0;
-        //buf = push_v5_arr(buf, -scale, scale, 0.0, 0.0, 1.0);
-		//buf = push_v5_arr(buf, scale, -scale, 0.0, 1.0, 0.0);
-		//buf = push_v5_arr(buf, scale, scale, 0.0, 1.0, 1.0);
-		//buf = push_v5_arr(buf, -scale, scale, 0.0, 0.0, 1.0);
-		//buf = push_v5_arr(buf, -scale, -scale, 0.0, 0.0, 0.0);
-		//buf = push_v5_arr(buf, scale, -scale, 0.0, 1.0, 0.0);
-    }
 
 	// glEnable(GL_TEXTURE_2D); GL_ERR; // Not applicable in gl 3.3 core
 
@@ -391,52 +345,20 @@ int main(int argc, char const *argv[]) {
 
     printf("GL_VERSION: %s\n", glGetString(GL_VERSION));
 
-    printf("Entering Render Loop\n");
-    GL_ERR;
 	glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 
-    GL_ERR;
-
     // Load mesh
 
-    bool vao_supported = true;
-
-    unsigned int mesh_vaoId = 0;
-    unsigned int mesh_vboId[2];
-    int drawHint = GL_STATIC_DRAW;
-
-    if (vao_supported) {
-        glGenVertexArrays(1, &mesh_vaoId);
-        glBindVertexArray(mesh_vaoId);
-    }
-
-    // Enable vertex attributes: position (shader-location = 0)
-    glGenBuffers(1, &mesh_vboId[0]);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh_vboId[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3*mesh_vertices_count, mesh_vertices, drawHint);
-    glVertexAttribPointer(0, 3, GL_FLOAT, 0, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    // Enable vertex attributes: texcoords (shader-location = 1)
-    glGenBuffers(1, &mesh_vboId[1]);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh_vboId[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*mesh_vertices_count, mesh_texcoords, drawHint);
-    glVertexAttribPointer(1, 2, GL_FLOAT, 0, 0, 0);
-    glEnableVertexAttribArray(1);
-
-    if (vao_supported) {
-        if (mesh_vaoId > 0) {
-            printf("Mesh uploaded successfully to VRAM (GPU) %i\n", mesh_vaoId);
-        } else {
-            printf("ERROR: Mesh could not be uploaded to VRAM (GPU)");
-        }
-    }
+    printf("Creating mesh\n");
+    Mesh* mesh_quad = mesh_create_quad(1);
+    renderer_prepare(mesh_quad);
     GL_ERR;
-    //
-
+    Mesh* mesh_cube = mesh_create_cube();
+    renderer_prepare(mesh_cube);
+    GL_ERR;
 
     while(!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -449,37 +371,14 @@ int main(int argc, char const *argv[]) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, placeholder_texture);
 
-                
-                GLint position = glGetAttribLocation(main_shader, "position"); GL_ERR;
-                GLint uvs = glGetAttribLocation(main_shader, "uvs"); GL_ERR;
-                GLint texture = glGetAttribLocation(main_shader, "texture_unit"); GL_ERR;
-
-                glUniformMatrix4fv(glGetUniformLocation(main_shader, "view_matrix"),1,GL_FALSE,view_matrix);
-                glUniformMatrix4fv(glGetUniformLocation(main_shader, "projection_matrix"), 1, GL_FALSE, projection_matrix);
-                glUniform1f(texture, 0.0);
-
-
-                int bytes_per_float = sizeof(float);
-                int stride = bytes_per_float * (5);
-
-                if(vao_supported) {
-                    glBindVertexArray(mesh_vaoId);    
+                int total_models = 2;
+                int idx_model = current_model % (total_models);
+                if (idx_model) {
+                    renderer_draw(main_shader, mesh_quad, view_matrix, projection_matrix);    
                 } else {
-                    int material_shader_LOC_VERTEX_POSITION = glGetAttribLocation(main_shader, "vertexPosition");
-                    int material_shader_LOC_VERTEX_TEXCOORD01 = glGetAttribLocation(main_shader, "vertexTexCoord");
-
-                     // Bind mesh VBO data: vertex position (shader-location = 0)
-                    glBindBuffer(GL_ARRAY_BUFFER, mesh_vboId[0]);
-                    glVertexAttribPointer(material_shader_LOC_VERTEX_POSITION, 3, GL_FLOAT, 0, 0, 0);
-                    glEnableVertexAttribArray(material_shader_LOC_VERTEX_POSITION);
-
-                    // Bind mesh VBO data: vertex texcoords (shader-location = 1)
-                    glBindBuffer(GL_ARRAY_BUFFER, mesh_vboId[1]);
-                    glVertexAttribPointer(material_shader_LOC_VERTEX_TEXCOORD01, 2, GL_FLOAT, 0, 0, 0);
-                    glEnableVertexAttribArray(material_shader_LOC_VERTEX_TEXCOORD01);
+                    renderer_draw(main_shader, mesh_cube, view_matrix, projection_matrix);
                 }
 
-                glDrawArrays(GL_TRIANGLES, 0, mesh_vertices_count);
 
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, 0);
@@ -494,6 +393,8 @@ int main(int argc, char const *argv[]) {
         glfwPollEvents();
     }
 
+    mesh_free(mesh_quad);
+    mesh_free(mesh_cube);
     glfwMakeContextCurrent(NULL);
     glfwDestroyWindow(window);
 
